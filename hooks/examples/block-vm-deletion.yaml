@@ -1,0 +1,49 @@
+# Block VM and resource deletion
+# ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
+#
+# Event:      PostToolUse
+# Type:       Command (Python)
+# Matcher:    Bash|ExecuteShellCommand|ExecutePythonCode
+# Activation: Always
+#
+# Prevents the agent from deleting Azure VMs, resource groups, disks,
+# NSGs, or VNets. Essential for demo and shared environments.
+
+hooks:
+  PostToolUse:
+    - type: command
+      matcher: "Bash|ExecuteShellCommand|ExecutePythonCode"
+      timeout: 30
+      failMode: block
+      script: |
+        #!/usr/bin/env python3
+        import sys, json, re
+
+        context = json.load(sys.stdin)
+        tool_input = context.get('tool_input', {})
+
+        # Get command from shell tools or code from Python tools
+        command = ''
+        if isinstance(tool_input, dict):
+            command = tool_input.get('command', '') or tool_input.get('code', '')
+
+        # Azure CLI delete operations to block
+        blocked_patterns = [
+            (r'az\s+vm\s+delete', 'az vm delete (VM deletion)'),
+            (r'az\s+vm\s+deallocate', 'az vm deallocate (VM deallocation)'),
+            (r'az\s+group\s+delete', 'az group delete (resource group deletion)'),
+            (r'az\s+resource\s+delete', 'az resource delete (resource deletion)'),
+            (r'az\s+disk\s+delete', 'az disk delete (disk deletion)'),
+            (r'az\s+network\s+nsg\s+delete', 'az network nsg delete (NSG deletion)'),
+            (r'az\s+network\s+vnet\s+delete', 'az network vnet delete (VNet deletion)'),
+        ]
+
+        for pattern, label in blocked_patterns:
+            if re.search(pattern, command, re.IGNORECASE):
+                print(json.dumps({
+                    "decision": "block",
+                    "reason": f"🛑 Blocked: {label} is not permitted. This is a safety control to prevent accidental resource deletion."
+                }))
+                sys.exit(0)
+
+        print(json.dumps({"decision": "allow"}))

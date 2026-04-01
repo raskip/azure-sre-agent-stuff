@@ -1,0 +1,37 @@
+# Audit all tool usage
+# ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
+#
+# Event:      PostToolUse
+# Type:       Command (Python)
+# Matcher:    * (all tools)
+# Activation: On Demand
+#
+# Logs every tool call with agent name, turn number, tool name, and success status.
+# The audit message is injected into the conversation as context.
+# Set to On Demand — toggle on during incidents or compliance-sensitive sessions.
+
+hooks:
+  PostToolUse:
+    - type: command
+      matcher: "*"
+      timeout: 30
+      failMode: allow
+      script: |
+        #!/usr/bin/env python3
+        import sys, json
+
+        context = json.load(sys.stdin)
+        tool_name = context.get('tool_name', 'unknown')
+        agent_name = context.get('agent_name', 'unknown')
+        succeeded = context.get('tool_succeeded', False)
+        turn = context.get('current_turn', '?')
+
+        audit = f"[AUDIT] Turn {turn} | Agent: {agent_name} | Tool: {tool_name} | Success: {succeeded}"
+        print(audit, file=sys.stderr)
+
+        print(json.dumps({
+            "decision": "allow",
+            "hookSpecificOutput": {
+                "additionalContext": audit
+            }
+        }))

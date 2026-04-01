@@ -1,0 +1,68 @@
+# Restrict to read-only operations
+# ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
+#
+# Event:      PostToolUse
+# Type:       Command (Python)
+# Matcher:    Bash|ExecuteShellCommand|ExecutePythonCode
+# Activation: On Demand
+#
+# Only allows read/diagnostic operations, blocking anything that modifies
+# infrastructure. Ideal for safe demo mode or read-only investigations.
+# Set to On Demand — toggle on for safe demos, off for remediation demos.
+
+hooks:
+  PostToolUse:
+    - type: command
+      matcher: "Bash|ExecuteShellCommand|ExecutePythonCode"
+      timeout: 30
+      failMode: block
+      script: |
+        #!/usr/bin/env python3
+        import sys, json, re
+
+        context = json.load(sys.stdin)
+        tool_input = context.get('tool_input', {})
+        command = ''
+        if isinstance(tool_input, dict):
+            command = tool_input.get('command', '') or tool_input.get('code', '')
+
+        # Allowed read-only patterns (Azure CLI)
+        readonly_patterns = [
+            r'az\s+\S+\s+(show|list|get)',
+            r'az\s+monitor\s+metrics\s+list',
+            r'az\s+vm\s+run-command\s+invoke',   # run-command needed for diagnostics
+            r'az\s+vm\s+get-instance-view',
+            r'az\s+network\s+(nsg|nic|vnet)\s+(show|list)',
+            r'az\s+resource\s+(show|list)',
+            r'az\s+backup\s+.*\s+(show|list)',
+        ]
+
+        # Diagnostic shell commands (always safe)
+        safe_commands = [
+            r'^(cat|head|tail|less|grep|awk|sed|wc|sort|uniq|find|ls|df|du|free|top|ps|uptime|vmstat|iostat|netstat|ss|ip|dig|nslookup|curl|wget|journalctl|systemctl\s+status|dmesg|lsblk|mount|fdisk\s+-l)\b',
+        ]
+
+        # Check if this is a known safe pattern
+        for pattern in readonly_patterns + safe_commands:
+            if re.search(pattern, command, re.IGNORECASE):
+                print(json.dumps({"decision": "allow"}))
+                sys.exit(0)
+
+        # Block modification commands
+        modify_patterns = [
+            r'az\s+\S+\s+(create|update|delete|start|stop|restart|resize|set)',
+            r'\b(rm|mv|cp|chmod|chown|mkdir|touch|tee|sed\s+-i|dd)\b',
+            r'\b(systemctl\s+(start|stop|restart|enable|disable))\b',
+            r'\b(apt|yum|dnf|pip)\s+install\b',
+        ]
+
+        for pattern in modify_patterns:
+            if re.search(pattern, command, re.IGNORECASE):
+                print(json.dumps({
+                    "decision": "block",
+                    "reason": "🔒 Read-only mode: This operation would modify the system. Only diagnostic (read) operations are allowed in this mode."
+                }))
+                sys.exit(0)
+
+        # Default: allow unknown commands (safe default for diagnostics)
+        print(json.dumps({"decision": "allow"}))

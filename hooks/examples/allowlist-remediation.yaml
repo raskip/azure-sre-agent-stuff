@@ -1,0 +1,77 @@
+# Allowlist-only remediation
+# ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
+#
+# Event:      PostToolUse
+# Type:       Command (Python)
+# Matcher:    Bash|ExecuteShellCommand|ExecutePythonCode
+# Activation: Always
+#
+# Only explicitly approved remediation commands are permitted — everything
+# else is blocked. This is the most secure pattern for production environments.
+# An allowlist is always safer than a blocklist.
+#
+# To approve new commands, add patterns to the 'approved' list below.
+
+hooks:
+  PostToolUse:
+    - type: command
+      matcher: "Bash|ExecuteShellCommand|ExecutePythonCode"
+      timeout: 30
+      failMode: block
+      script: |
+        #!/usr/bin/env python3
+        import sys, json, re
+
+        context = json.load(sys.stdin)
+        tool_input = context.get('tool_input', {})
+        command = ''
+        if isinstance(tool_input, dict):
+            command = tool_input.get('command', '') or tool_input.get('code', '')
+
+        # ---- APPROVED REMEDIATION COMMANDS ----
+        # Add patterns here as you approve new remediation actions
+        approved = [
+            # VM restart
+            (r'az\s+vm\s+restart\b', 'VM restart'),
+            # VM resize
+            (r'az\s+vm\s+resize\b', 'VM resize'),
+            # Disk expand
+            (r'az\s+disk\s+update\s+.*--size-gb\b', 'Disk expansion'),
+            # Service restart (systemd)
+            (r'systemctl\s+restart\s+\S+', 'Service restart'),
+            # Extension reinstall
+            (r'az\s+vm\s+extension\s+(set|delete)\b', 'VM extension management'),
+            # PostgreSQL restart
+            (r'az\s+postgres\s+flexible-server\s+restart\b', 'PostgreSQL restart'),
+        ]
+
+        # ---- ALWAYS-SAFE OPERATIONS (read-only) ----
+        safe = [
+            r'^az\s+\S+\s+(show|list|get)\b',
+            r'^az\s+monitor\s+',
+            r'^az\s+vm\s+run-command\s+invoke\b',
+            r'^(cat|grep|head|tail|df|du|free|ps|top|journalctl|systemctl\s+status|dmesg|lsblk|uptime|vmstat|iostat|ss|netstat|ip\s+(a|r|link)|dig|nslookup|curl\s+-[sISo])\b',
+        ]
+
+        # Check approved remediation first
+        for pattern, label in approved:
+            if re.search(pattern, command, re.IGNORECASE):
+                print(json.dumps({
+                    "decision": "allow",
+                    "hookSpecificOutput": {
+                        "additionalContext": f"[SAFETY] ✅ Approved remediation: {label}"
+                    }
+                }))
+                sys.exit(0)
+
+        # Check always-safe operations
+        for pattern in safe:
+            if re.search(pattern, command, re.IGNORECASE):
+                print(json.dumps({"decision": "allow"}))
+                sys.exit(0)
+
+        # Block everything else
+        print(json.dumps({
+            "decision": "block",
+            "reason": "🛑 This command is not in the approved remediation list. Only pre-approved operations are allowed. Contact your platform team to add new approved commands."
+        }))

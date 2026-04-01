@@ -1,0 +1,36 @@
+# Require evidence in diagnostics
+# ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
+#
+# Event:      Stop
+# Type:       Prompt
+# Activation: Always
+#
+# A lighter alternative to enforce-structured-response — simply requires
+# that diagnostic responses contain concrete numbers (percentages, counts,
+# latency values) rather than vague descriptions.
+
+hooks:
+  Stop:
+    - type: prompt
+      timeout: 30
+      failMode: allow
+      maxRejections: 3
+      prompt: |
+        Review the agent's response below:
+
+        $ARGUMENTS
+
+        Does the response contain at least TWO concrete, quantified observations?
+        Examples of concrete observations:
+        - "CPU utilization is 94%"
+        - "Disk /dev/sda1 is at 97% capacity (47.5 GB / 49 GB)"
+        - "3,847 failed SSH login attempts in the last 24 hours"
+        - "P95 latency is 847ms"
+
+        Examples of vague observations that do NOT count:
+        - "CPU usage is high"
+        - "The disk is almost full"
+        - "There are many failed login attempts"
+
+        If the response includes at least two concrete, quantified observations: {"ok": true}
+        If not: {"ok": false, "reason": "Please provide concrete numbers in your observations. Use actual metric values (percentages, counts, latency in ms, disk sizes in GB) rather than qualitative descriptions."}

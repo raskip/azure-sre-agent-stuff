@@ -1,0 +1,27 @@
+# Require summary section
+# ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
+#
+# Event:      Stop
+# Type:       Prompt
+# Activation: Always
+#
+# Ensures every response ends with a clear Summary or Conclusion section.
+# Simple but effective for consistent output format.
+# Good default agent-level hook.
+
+hooks:
+  Stop:
+    - type: prompt
+      timeout: 30
+      failMode: allow
+      maxRejections: 3
+      prompt: |
+        Check the agent response below.
+
+        $ARGUMENTS
+
+        Does the response include a clear "## Summary" or "## Conclusion" section
+        near the end that concisely summarizes the key findings and next steps?
+
+        If yes: {"ok": true}
+        If no: {"ok": false, "reason": "Add a ## Summary section at the end of your response that concisely lists your key findings and recommended next steps."}
