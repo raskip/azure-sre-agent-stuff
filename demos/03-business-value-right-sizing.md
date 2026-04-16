@@ -50,7 +50,7 @@ This gives the VM a tiny workload (~1–3% CPU) — a 4-vCPU machine running ngi
 ### Step 3: Verify Azure Monitor has data
 
 ```bash
-# Check that CPU metrics exist for the last hour
+# Linux (GNU date)
 az monitor metrics list \
     --resource $(az vm show --resource-group rg-sre-demo-eastus2 --name vm-oversized --query id -o tsv) \
     --metric "Percentage CPU" \
@@ -61,6 +61,12 @@ az monitor metrics list \
     --query "value[0].timeseries[0].data[-5:].{time:timeStamp, avg:average}" \
     -o table
 ```
+
+> **macOS / BSD alternative** (replace the two `date` lines; `-v -1H` = subtract 1 hour):
+> ```bash
+> # --start-time $(date -u -v -1H +%Y-%m-%dT%H:%M:%SZ)
+> # --end-time   $(date -u +%Y-%m-%dT%H:%M:%SZ)
+> ```
 
 You should see CPU averages well below 10%. If you see no data, wait longer.
 

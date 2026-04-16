@@ -28,6 +28,12 @@ hooks:
         if isinstance(tool_input, dict):
             command = tool_input.get('command', '') or tool_input.get('code', '')
 
+        # Compound commands (e.g. "az vm show; az vm delete") would otherwise bypass detection
+        # because re.search would match the read-only prefix first. Evaluate each sub-command
+        # separately: if ANY segment is a modification command, flag the whole thing.
+        segments = re.split(r'\s*(?:&&|\|\||;|\n)\s*', command)
+        segments = [s.strip() for s in segments if s.strip()]
+
         # Allowed read-only patterns (Azure CLI)
         readonly_patterns = [
             r'az\s+\S+\s+(show|list|get)',
@@ -44,12 +50,6 @@ hooks:
             r'^(cat|head|tail|less|grep|awk|sed|wc|sort|uniq|find|ls|df|du|free|top|ps|uptime|vmstat|iostat|netstat|ss|ip|dig|nslookup|curl|wget|journalctl|systemctl\s+status|dmesg|lsblk|mount|fdisk\s+-l)\b',
         ]
 
-        # Check if this is a known safe pattern
-        for pattern in readonly_patterns + safe_commands:
-            if re.search(pattern, command, re.IGNORECASE):
-                print(json.dumps({"decision": "allow"}))
-                sys.exit(0)
-
         # Block modification commands
         modify_patterns = [
             r'az\s+\S+\s+(create|update|delete|start|stop|restart|resize|set)',
@@ -58,13 +58,23 @@ hooks:
             r'\b(apt|yum|dnf|pip)\s+install\b',
         ]
 
-        for pattern in modify_patterns:
-            if re.search(pattern, command, re.IGNORECASE):
-                print(json.dumps({
-                    "decision": "block",
-                    "reason": "🔒 Read-only mode: This operation would modify the system. Only diagnostic (read) operations are allowed in this mode."
-                }))
-                sys.exit(0)
+        # If any segment matches a modify pattern, flag it (takes precedence over read-only match)
+        for seg in segments:
+            for pattern in modify_patterns:
+                if re.search(pattern, seg, re.IGNORECASE):
+                    print(json.dumps({
+                        "decision": "block",
+                        "reason": f"🔒 Read-only mode: Detected modifying operation in segment '{seg[:120]}'. Only diagnostic (read) operations are allowed."
+                    }))
+                    sys.exit(0)
 
-        # Default: allow unknown commands (safe default for diagnostics)
+        # Otherwise: if every segment is a known read-only/safe pattern, allow
+        if segments and all(
+            any(re.search(p, seg, re.IGNORECASE) for p in readonly_patterns + safe_commands)
+            for seg in segments
+        ):
+            print(json.dumps({"decision": "allow"}))
+            sys.exit(0)
+
+        # Default: allow unknown commands (safe default for diagnostics — they're read-only by convention)
         print(json.dumps({"decision": "allow"}))

@@ -62,11 +62,18 @@ if ($TargetResourceGroups.Count -eq 0) {
 # --- Check Azure CLI login ---
 Write-Host "`n=== Azure SRE Agent Deployment ===" -ForegroundColor Cyan
 Write-Host "Checking Azure CLI login..." -ForegroundColor Gray
+# NOTE: `$ErrorActionPreference = 'Stop'` does NOT make native az throw on
+# non-zero exits in PS ≤ 7.3, so we check $LASTEXITCODE explicitly.
+$accountJson = az account show --output json 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $accountJson) {
+    Write-Host "Not logged in. Run 'az login' first." -ForegroundColor Red
+    exit 1
+}
 try {
-    $account = az account show --output json 2>$null | ConvertFrom-Json
+    $account = $accountJson | ConvertFrom-Json
     Write-Host "Logged in as: $($account.user.name)" -ForegroundColor Green
 } catch {
-    Write-Host "Not logged in. Run 'az login' first." -ForegroundColor Red
+    Write-Host "Could not parse 'az account show' output. Try 'az login' again." -ForegroundColor Red
     exit 1
 }
 

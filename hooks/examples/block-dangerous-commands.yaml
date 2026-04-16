@@ -31,16 +31,24 @@ hooks:
             (r'\bchmod\s+777\b', 'chmod 777 (world-writable permissions)'),
             (r'\bdrop\s+(table|database)\b', 'DROP TABLE/DATABASE (irreversible)'),
             (r'\btruncate\s+table\b', 'TRUNCATE TABLE (data wipe)'),
+            # Evaluated per-statement below (split on ;) so a trailing WHERE on a later
+            # statement can't mask an earlier unconditional DELETE FROM.
             (r'\bdelete\s+from\b(?!.*\bwhere\b)', 'DELETE FROM without WHERE (full table wipe)'),
             (r'\bmkfs\b', 'mkfs (format filesystem)'),
         ]
 
-        for pattern, label in dangerous:
-            if re.search(pattern, command, re.IGNORECASE):
-                print(json.dumps({
-                    "decision": "block",
-                    "reason": f"🛑 Blocked: {label}. Use safe, non-destructive alternatives."
-                }))
-                sys.exit(0)
+        # Split SQL/shell compound commands so lookaheads only see the same statement.
+        statements = [s.strip() for s in re.split(r'[;\n]', command) if s.strip()]
+        if not statements:
+            statements = [command]
+
+        for stmt in statements:
+            for pattern, label in dangerous:
+                if re.search(pattern, stmt, re.IGNORECASE):
+                    print(json.dumps({
+                        "decision": "block",
+                        "reason": f"🛑 Detected: {label}. Use safe, non-destructive alternatives."
+                    }))
+                    sys.exit(0)
 
         print(json.dumps({"decision": "allow"}))

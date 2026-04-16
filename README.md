@@ -162,10 +162,10 @@ The agent has built-in safety — action classification, review mode, and judgme
 
 | Benefit | What it means |
 |---------|---------------|
-| **Deterministic enforcement** | A rule that blocks `rm -rf` will always block it — no reasoning, no exceptions |
+| **Deterministic detection** | A rule that flags `rm -rf` will always flag it — no reasoning, no exceptions |
 | **Quality gates** | Every response must cite evidence, include a summary, follow your format |
 | **Audit & compliance** | Log every tool call with context — agent name, turn, tool, success/failure |
-| **Operational guardrails** | Read-only mode, VM deletion prevention, allowlist-only remediation |
+| **Operational guardrails** | Read-only enforcement via Review mode + RBAC; detect VM deletions; log remediations |
 
 **When to create a hook:** You need a rule enforced every time, an audit trail, or a minimum quality bar. **When to skip:** The environment is non-critical, you're exploring, or run modes already provide enough control.
 
@@ -182,11 +182,11 @@ Hooks are governance guardrails that intercept agent behavior at key execution p
 | [`require-summary-section`](hooks/examples/require-summary-section.yaml) | Stop | Reject responses that lack a Summary section |
 | [`enforce-structured-response`](hooks/examples/enforce-structured-response.yaml) | Stop | Require a specific output format (severity, findings, actions) |
 | [`require-evidence-in-diagnostics`](hooks/examples/require-evidence-in-diagnostics.yaml) | Stop | Ensure the agent cites actual command output as evidence |
-| [`restrict-to-readonly`](hooks/examples/restrict-to-readonly.yaml) | PostToolUse | Block write operations — agent can diagnose but not change anything |
-| [`block-dangerous-commands`](hooks/examples/block-dangerous-commands.yaml) | PostToolUse | Block `rm -rf`, `format`, `Stop-Computer`, and other destructive commands |
-| [`block-vm-deletion`](hooks/examples/block-vm-deletion.yaml) | PostToolUse | Prevent the agent from deleting VMs |
+| [`restrict-to-readonly`](hooks/examples/restrict-to-readonly.yaml) | PostToolUse | Detect write operations after they run — pair with Review mode or RBAC for true prevention |
+| [`block-dangerous-commands`](hooks/examples/block-dangerous-commands.yaml) | PostToolUse | Detect `rm -rf`, `format`, `Stop-Computer`, and other destructive commands in output |
+| [`block-vm-deletion`](hooks/examples/block-vm-deletion.yaml) | PostToolUse | Detect VM deletion attempts and flag them in the audit trail |
 | [`audit-all-tool-usage`](hooks/examples/audit-all-tool-usage.yaml) | PostToolUse | Log every tool invocation for diagnostic/demo auditing |
-| [`allowlist-remediation`](hooks/examples/allowlist-remediation.yaml) | PostToolUse | Only allow pre-approved remediation commands |
+| [`allowlist-remediation`](hooks/examples/allowlist-remediation.yaml) | PostToolUse | Flag any remediation command not on the pre-approved allowlist |
 
 See the [Hooks Guide](hooks/README.md) for concepts, configuration reference, and best practices.
 

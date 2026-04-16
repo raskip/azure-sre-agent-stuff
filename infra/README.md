@@ -99,7 +99,9 @@ The deploy script auto-increments the instance number (001, 002, 003...) based o
 | **High** | Reader + Contributor + Log Analytics Reader | Agent can read and modify resources (recommended for full SRE workflows) |
 | **Low** | Reader + Log Analytics Reader | Agent can only read resources (suitable for monitoring and diagnostics only) |
 
-Both levels also assign Log Analytics Reader, Application Insights Component Contributor, and Key Vault roles on the deployment resource group.
+Both levels assign their roles **at the scope of each target resource group** listed in `TargetResourceGroups`. The deployment resource group itself only receives **Log Analytics Reader** (plus **Reader** and **Contributor** at High) for the managed identity — there are no Application Insights or Key Vault role assignments created by default.
+
+> **Note:** The inner `role-assignments-minimal.bicep` template includes optional Application Insights Component Contributor and Key Vault Secrets/Certificate User role blocks, but they are guarded by `enableKeyVault` / `systemAssignedIdentityPrincipalId` parameters that the default deployment does not wire through. Pass those parameters explicitly if you need those roles.
 
 ## Post-Deployment Steps
 

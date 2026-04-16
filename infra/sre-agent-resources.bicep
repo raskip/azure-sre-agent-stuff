@@ -59,8 +59,9 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // Create Action Group for Smart Detection alerts
+// Suffix with uniqueSuffix to prevent collisions if two agents share a resource group.
 resource smartDetectionActionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
-  name: 'Application Insights Smart Detection'
+  name: 'Application Insights Smart Detection (${uniqueSuffix})'
   location: 'Global'
   properties: {
     groupShortName: 'SmartDetect'

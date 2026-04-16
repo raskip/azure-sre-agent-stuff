@@ -30,13 +30,13 @@ Hooks add a layer that the agent's built-in safety can't provide: **deterministi
 
 The [official docs](https://sre.azure.com/docs/capabilities/agent-hooks) describe hooks as custom checkpoints that intercept and control agent behavior at key execution points. Here are the specific benefits:
 
-### 1. Deterministic policy enforcement
+### 1. Deterministic policy detection
 
-Unlike the agent's judgment (which is probabilistic), hooks enforce rules with certainty. A command hook that blocks `rm -rf` will ALWAYS block it — no reasoning, no exceptions, no edge cases where the agent decides it's okay.
+Unlike the agent's judgment (which is probabilistic), hooks apply deterministic rules with certainty. A command hook that flags `rm -rf` will ALWAYS flag it — no reasoning, no exceptions, no edge cases where the agent decides it's okay.
 
-**Why this matters:** In production, "the agent usually avoids this" isn't good enough. You need "this is always blocked." Hooks provide that guarantee.
+**Why this matters:** In production, "the agent usually avoids this" isn't good enough. You need "this is always caught and recorded." Hooks provide that guarantee.
 
-> **Example from this repo:** The [`block-dangerous-commands`](../hooks/examples/block-dangerous-commands.yaml) hook uses regex to block `rm -rf`, `sudo`, `chmod 777`, `DROP TABLE`, and other destructive patterns. It doesn't matter how good the agent's reason is — the hook blocks it.
+> **Example from this repo:** The [`block-dangerous-commands`](../hooks/examples/block-dangerous-commands.yaml) hook uses regex to detect `rm -rf`, `sudo`, `chmod 777`, `DROP TABLE`, and other destructive patterns in tool output. Because `PostToolUse` hooks run **after** the tool has executed, the hook's job is detection and alerting, not prevention. For true prevention, combine this with Review mode (operator approves every tool call) or RBAC (the managed identity simply cannot execute destructive operations).
 
 ### 2. Quality gates
 
@@ -60,13 +60,13 @@ For regulated environments, you need a verifiable record of what the agent did. 
 
 ### 4. Operational guardrails
 
-Sometimes you need hard limits on what the agent can do, beyond what run modes provide:
+Sometimes you need governance beyond what run modes provide — but remember that PostToolUse hooks **detect** rather than prevent, since they run after a tool has executed:
 
-- Read-only mode that blocks ALL write operations (not just destructive ones)
-- VM deletion prevention in shared environments
-- Allowlist-only remediation (only pre-approved commands)
+- Read-only enforcement — combine a detection hook with Review mode or read-only RBAC for hard prevention
+- VM deletion detection and audit-logging in shared environments
+- Allowlist-only remediation — flag anything outside the approved list for review
 
-Run modes give you two presets (Autonomous, Review). Hooks give you fine-grained control tailored to your exact requirements.
+Run modes give you two presets (Autonomous, Review). Hooks give you fine-grained detection and logging tailored to your exact requirements, and Review mode + RBAC give you the prevention half.
 
 > **Example from this repo:** The [`restrict-to-readonly`](../hooks/examples/restrict-to-readonly.yaml) hook blocks any tool call that modifies infrastructure. The [`allowlist-remediation`](../hooks/examples/allowlist-remediation.yaml) hook takes the most secure approach: only explicitly approved commands are permitted.
 
@@ -107,7 +107,7 @@ Create a hook when:
 | **Compliance requires audit trails** | "We need a log of every tool call for SOC 2" |
 | **Quality must be guaranteed** | "Every diagnostic report must cite evidence" |
 | **You need scope limits** | "The agent should only read, never modify, in this environment" |
-| **Safety is non-negotiable** | "VM deletion must be impossible, regardless of context" |
+| **Safety must be recorded and reviewed** | "VM deletions must always be flagged and logged, regardless of context (use PostToolUse + Review mode for prevention)" |
 | **Output format is mandatory** | "All responses must include Root Cause, Evidence, and Recommendations" |
 | **You want defense in depth** | "Even if the skill doesn't enforce safety, the hook does" |
 
