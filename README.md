@@ -214,6 +214,12 @@ azure-sre-agent-stuff/
 ├── hooks/
 │   ├── README.md                      ← Hooks guide & configuration reference
 │   └── examples/                      ← Ready-to-use hook YAML files
+├── demos/                             ← Customer demo playbooks (5/15/30 min)
+│   ├── README.md                      ← Demo overview & prerequisites
+│   ├── 01-quick-wow-high-cpu.md       ← 5-min "wow moment" — CPU diagnosis
+│   ├── 02-governance-hooks.md         ← 10-min enterprise guardrails
+│   ├── 03-business-value-right-sizing.md  ← 10-min cost optimization
+│   └── 04-full-demo-script.md         ← 30-min complete demo flow
 ├── infra/                             ← Bicep templates for agent + test VMs
 └── docs/
     ├── why-and-when-to-use-skills.md
