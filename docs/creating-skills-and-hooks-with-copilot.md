@@ -1,6 +1,8 @@
 # Creating Skills and Hooks
 
-There are two ways to create skills and hooks for Azure SRE Agent:
+> Last verified against Azure SRE Agent documentation: April 2026
+
+There are two waysto create skills and hooks for Azure SRE Agent:
 
 1. **Ask Azure SRE Agent directly** — Chat with your agent and ask it to draft a skill or hook. The agent understands its own skill format and can generate content for you. However, it **cannot save skills or hooks** — you'll need to copy the output and paste it into the portal manually.
 
@@ -28,7 +30,7 @@ and recommendations.
 
 The agent will generate a complete skill prompt. Copy it and:
 
-1. Go to **Builder** → **Subagent builder** → **Create** → **Skill**
+1. Go to **Agent Canvas** → **Custom agents** → **Create** → **Skill**
 2. Paste the content into the prompt field
 3. Attach the required tools (`RunAzCliReadCommands`, `RunAzCliWriteCommands`)
 4. **Save**
@@ -143,7 +145,7 @@ Follow the same format as the other README.md files in skills/vm/. Include:
 
 Once the skill is ready:
 1. Open [sre.azure.com](https://sre.azure.com) and select your agent
-2. Go to **Builder** → **Subagent builder** → **Create** → **Skill**
+2. Go to **Agent Canvas** → **Custom agents** → **Create** → **Skill**
 3. Paste the contents of your SKILL.md into the prompt field
 4. Attach the tools listed in the YAML frontmatter (`RunAzCliReadCommands`, `RunAzCliWriteCommands`)
 5. Test with the example prompts from your README
@@ -205,7 +207,7 @@ Before deploying to your agent:
    echo '{"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}, "tool_succeeded": true}' | python3 your-hook-script.py
    ```
 
-2. **Test in the portal playground** — Go to **Subagent builder → Test playground** to test subagent-level hooks, or use **Chat** to test agent-level hooks.
+2. **Test in the portal playground** — Go to **Agent Canvas → Custom agents → Test playground** to test custom agent-level hooks, or use **Chat** to test agent-level hooks.
 
 3. **Start with `failMode: allow`** — During testing, set `failMode: allow` so a buggy hook doesn't block all agent operations. Switch to `failMode: block` once validated.
 
@@ -219,7 +221,7 @@ Before deploying to your agent:
 6. Set **Timeout**, **Fail mode**, and **Activation** (Always or On Demand)
 7. Click **Save**
 
-For subagent-level hooks, go to **Subagent builder → Manage Hooks** instead.
+For custom agent-level hooks, go to **Agent Canvas → Custom agents → Manage Hooks** instead.
 
 ### Hook Types
 

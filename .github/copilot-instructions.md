@@ -60,6 +60,7 @@ All environment-specific values are parameters — no hardcoded subscription IDs
 
 ## When helping users with this repo
 
+- **Verify claims against the product** — Azure SRE Agent evolves rapidly. When updating this repo, check https://sre.azure.com/docs/ for current terminology, run modes, portal paths, and capabilities.
 - If asked to add a new skill, follow the SKILL.md format from existing skills
 - If asked to generalize or modify, never introduce hardcoded subscription IDs, tenant IDs, or environment-specific resource names
 - Keep all examples self-contained and easy to copy-paste

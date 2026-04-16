@@ -1,6 +1,8 @@
 # Azure SRE Agent — Skills, Hooks & Deployment Guide
 
-> A community starter kit for [Azure SRE Agent](https://sre.azure.com): **10 VM troubleshooting skills**, **8 governance hooks**, Bicep deployment templates, and step-by-step guides to get started quickly.
+> Last verified against Azure SRE Agent documentation: April 2026
+
+> A community starter kitfor [Azure SRE Agent](https://sre.azure.com): **10 VM troubleshooting skills**, **8 governance hooks**, Bicep deployment templates, and step-by-step guides to get started quickly.
 >
 > ⚠️ **Example content** — all skills and hooks in this repo were created with [GitHub Copilot CLI](https://githubnext.com/projects/copilot-cli) as starting points. Test and customize for your environment before production use. **Use at your own risk.**
 
@@ -183,7 +185,7 @@ Hooks are governance guardrails that intercept agent behavior at key execution p
 | [`restrict-to-readonly`](hooks/examples/restrict-to-readonly.yaml) | PostToolUse | Block write operations — agent can diagnose but not change anything |
 | [`block-dangerous-commands`](hooks/examples/block-dangerous-commands.yaml) | PostToolUse | Block `rm -rf`, `format`, `Stop-Computer`, and other destructive commands |
 | [`block-vm-deletion`](hooks/examples/block-vm-deletion.yaml) | PostToolUse | Prevent the agent from deleting VMs |
-| [`audit-all-tool-usage`](hooks/examples/audit-all-tool-usage.yaml) | PostToolUse | Log every tool invocation for compliance auditing |
+| [`audit-all-tool-usage`](hooks/examples/audit-all-tool-usage.yaml) | PostToolUse | Log every tool invocation for diagnostic/demo auditing |
 | [`allowlist-remediation`](hooks/examples/allowlist-remediation.yaml) | PostToolUse | Only allow pre-approved remediation commands |
 
 See the [Hooks Guide](hooks/README.md) for concepts, configuration reference, and best practices.
@@ -224,7 +226,7 @@ azure-sre-agent-stuff/
 ## How to add skills to your agent
 
 1. Open [sre.azure.com](https://sre.azure.com) and select your agent.
-2. Go to **Builder** → **Subagent builder** → **Create** → **Skill**.
+2. Go to **Agent Canvas** → **Custom agents** → **Create** → **Skill**.
 3. Give the skill a name (e.g., `high-cpu-vm-troubleshooting`).
 4. Paste the contents of the skill's `SKILL.md` file into the prompt field.
 5. Attach the required tools (typically `RunAzCliReadCommands` + `RunAzCliWriteCommands`).

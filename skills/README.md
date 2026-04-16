@@ -1,6 +1,8 @@
 # Azure SRE Agent — Skills Guide
 
-> ⚠️ **Example skills** — the skills in this repo are designed as a starting point. Test and customize for your environment before production use.
+> Last verified against Azure SRE Agent documentation: April 2026
+
+> ⚠️ **Example skills**— the skills in this repo are designed as a starting point. Test and customize for your environment before production use.
 
 > **Audience:** Azure SRE Agent users who want to add domain-specific troubleshooting procedures to their agents.
 >
@@ -55,7 +57,7 @@ See [`vm/README.md`](vm/README.md) for the full list of VM skills, testing guide
 
 1. **Open the portal** — Go to [sre.azure.com](https://sre.azure.com) and select your agent.
 2. **Navigate to Builder** — Click **Builder** in the left nav.
-3. **Open Subagent builder** — Click **Subagent builder** → **Create** → **Skill**.
+3. **Open Custom agents** — Click **Agent Canvas** → **Custom agents** → **Create** → **Skill**.
 4. **Name the skill** — Use a descriptive name that matches the folder name (e.g., `high-cpu-vm-troubleshooting`).
 5. **Paste the prompt** — Open the skill's `SKILL.md` file and paste its full contents into the prompt field.
 6. **Attach tools** — Add the tools the skill needs (see [Tool requirements](#tool-requirements) below).
@@ -81,6 +83,8 @@ Some skills may also use:
 - **`GetAzureMonitorMetrics`** — For pulling VM metric data
 
 Check each skill's `README.md` for its specific tool requirements.
+
+> 💡 **MCP tools:** Azure SRE Agent skills now support attaching [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) tools alongside built-in tools like `RunAzCliReadCommands`. If your organization exposes internal APIs or tooling via MCP servers, you can attach them to skills for richer diagnostics and remediation workflows.
 
 ---
 
@@ -112,7 +116,7 @@ tools:
   - RunAzCliWriteCommands
 ```
 
-Custom agents are configured in the portal under **Builder** → **Subagent builder** → **Create** → **Agent**.
+Custom agents are configured in the portal under **Agent Canvas** → **Custom agents** → **Create** → **Agent** (with `allowed_skills`).
 
 ---
 

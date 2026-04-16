@@ -8,7 +8,11 @@
 #
 # Logs every tool call with agent name, turn number, tool name, and success status.
 # The audit message is injected into the conversation as context.
-# Set to On Demand — toggle on during incidents or compliance-sensitive sessions.
+# Set to On Demand — toggle on during incidents or diagnostic/demo sessions.
+#
+# NOTE: This hook provides diagnostic/demo-level auditing only (stderr + conversation
+# context injection). For production compliance auditing (SOC 2, ISO 27001, etc.),
+# send audit events to Azure Monitor Log Analytics or Event Hub instead.
 
 hooks:
   PostToolUse:

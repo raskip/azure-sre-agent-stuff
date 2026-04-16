@@ -108,7 +108,7 @@ These steps must be completed in the Azure portal — they are not automatable v
 1. **Open the agent portal URL** (printed after deployment)
 2. **Choose a model provider** — Azure OpenAI (EUDB-compliant) or Anthropic (Claude)
 3. **Connect your GitHub repository** — the repo containing your skills and hooks
-4. **Add skills** — Builder > Subagent builder > Create > Skill
+4. **Add skills** — Agent Canvas > Custom agents > Create > Skill
    - Paste the contents of each `SKILL.md` file
    - Attach tools: `RunAzCliReadCommands` and/or `RunAzCliWriteCommands`
 5. **Add hooks** (optional) — paste hook definitions for governance guardrails

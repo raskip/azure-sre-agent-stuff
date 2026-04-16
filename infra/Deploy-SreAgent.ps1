@@ -170,7 +170,7 @@ Write-Host "`n=== Next steps (portal only) ===" -ForegroundColor Yellow
 Write-Host "1. Open the portal URL above"
 Write-Host "2. Choose model provider: Azure OpenAI (EUDB) or Anthropic (Claude)"
 Write-Host "3. Connect GitHub repo: <your-github-org/repo>"
-Write-Host "4. Add skills: Builder > Subagent builder > Create > Skill"
+Write-Host "4. Add skills: Agent Canvas > Custom agents > Create > Skill"
 Write-Host "   - Paste SKILL.md from skills/<domain>/<skill-name>/SKILL.md"
 Write-Host "   - Attach tools: RunAzCliReadCommands + RunAzCliWriteCommands"
 Write-Host "5. Complete team onboarding conversation"

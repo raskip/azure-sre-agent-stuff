@@ -15,7 +15,7 @@ Before diving into hooks, it helps to understand what the agent already provides
 | **Action classification** | Every action is classified as safe, cautious, or destructive |
 | **Review mode** | Destructive actions require operator confirmation before executing |
 | **Reasoning loop** | Agent reasons about safety as part of its investigation |
-| **Run modes** | Autonomous, Review, or Restricted — controls what the agent can do without approval |
+| **Run modes** | Autonomous or Review — controls what the agent can do without approval |
 | **Built-in judgment** | Agent uses its knowledge of Azure best practices to avoid harmful actions |
 
 For routine operations and well-understood scenarios, this is often enough.
@@ -66,7 +66,7 @@ Sometimes you need hard limits on what the agent can do, beyond what run modes p
 - VM deletion prevention in shared environments
 - Allowlist-only remediation (only pre-approved commands)
 
-Run modes give you three presets (Autonomous, Review, Restricted). Hooks give you fine-grained control tailored to your exact requirements.
+Run modes give you two presets (Autonomous, Review). Hooks give you fine-grained control tailored to your exact requirements.
 
 > **Example from this repo:** The [`restrict-to-readonly`](../hooks/examples/restrict-to-readonly.yaml) hook blocks any tool call that modifies infrastructure. The [`allowlist-remediation`](../hooks/examples/allowlist-remediation.yaml) hook takes the most secure approach: only explicitly approved commands are permitted.
 
@@ -149,9 +149,9 @@ These three mechanisms serve different purposes and work together:
 |---|--------|-------|-----------|
 | **Controls** | What the agent investigates and how | What quality/safety standards must be met | What actions the agent can take without approval |
 | **When it runs** | When a user question matches the skill's domain | Automatically at Stop or PostToolUse events | Always active based on configuration |
-| **Output** | Structured diagnostic reports | Allow/block decisions with feedback | Autonomous, Review, or Restricted behavior |
+| **Output** | Structured diagnostic reports | Allow/block decisions with feedback | Autonomous or Review behavior |
 | **Deterministic?** | No — agent interprets the skill prompt | Command hooks: yes. Prompt hooks: mostly. | Yes — mode is fixed |
-| **Customizable?** | Per-skill prompts and tools | Per-hook scripts, prompts, and matchers | Three preset modes |
+| **Customizable?** | Per-skill prompts and tools | Per-hook scripts, prompts, and matchers | Two preset modes |
 
 **How they work together:**
 
