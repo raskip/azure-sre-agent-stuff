@@ -1,6 +1,10 @@
 # Azure SRE Agent — Hooks Guide
 
-> ⚠️ **Example hooks** — the hooks in this repo are designed as a starting point. Test and customize for your environment before production use.
+> Last verified against Azure SRE Agent documentation: April 2026
+
+> ⚠️ **Example hooks**— the hooks in this repo are designed as a starting point. Test and customize for your environment before production use.
+
+> ⚠️ **Important: PostToolUse hooks detect, they don't prevent.** PostToolUse hooks run **after** a tool has already executed successfully. They can flag violations, inject audit context, and block the *result* from being used further — but the underlying command has already run. To truly **prevent** actions, use [Review mode](https://sre.azure.com/docs/concepts/run-modes), [low-access RBAC deployments](#achieving-true-prevention), or Azure RBAC custom roles. PostToolUse hooks complement these as a detection and audit layer. See [Achieving True Prevention](#achieving-true-prevention) below.
 
 > **Audience:** Azure SRE Agent users who want to add governance, quality gates, and safety controls to their agents.
 >
@@ -19,19 +23,20 @@
 3. [Concepts](#concepts)
 4. [Configuration reference](#configuration-reference)
 5. [Practical examples](#practical-examples)
-6. [How to configure hooks](#how-to-configure-hooks)
-7. [Best practices](#best-practices)
-8. [Further reading](#further-reading)
+6. [Achieving true prevention](#achieving-true-prevention)
+7. [How to configure hooks](#how-to-configure-hooks)
+8. [Best practices](#best-practices)
+9. [Further reading](#further-reading)
 
 ---
 
 ## What are hooks?
 
-Hooks are **custom checkpoints** that intercept and control agent behavior at key execution points. Think of them as governance guardrails: they let you enforce quality standards, prevent dangerous operations, and maintain audit trails — without building custom middleware.
+Hooks are **custom checkpoints** that evaluate agent behavior at key execution points. Think of them as governance guardrails: they let you enforce quality standards, detect dangerous operations, and maintain audit trails — without building custom middleware.
 
 ```
 Agent about to stop  → Stop hook evaluates response   → Allow or reject
-Agent uses a tool    → PostToolUse hook checks result  → Allow, block, or inject context
+Agent used a tool    → PostToolUse hook checks result  → Detect, audit, inject context, or suppress result
 ```
 
 ### Why hooks matter
@@ -40,7 +45,7 @@ Agent uses a tool    → PostToolUse hook checks result  → Allow, block, or in
 |---------------|------------|
 | Agent decides when it's "done" | **You** define what "done" means |
 | Tool usage is invisible | Every tool call can be audited |
-| Dangerous commands proceed silently | Policy enforcement blocks them automatically |
+| Dangerous commands go unnoticed | PostToolUse hooks detect and flag them after execution |
 | Quality depends on prompting alone | Automated quality gates catch gaps |
 
 Hooks complement [run modes](https://sre.azure.com/docs/concepts/run-modes) — run modes control **what** the agent can do; hooks control **how well** it does it and **what happens** with the results.
@@ -78,7 +83,7 @@ That's it. You just created a quality gate that every agent response must pass t
 | Event | Triggers when | What you can do |
 |-------|---------------|-----------------|
 | **Stop** | Agent is about to return a final response | Validate completeness, enforce formatting, reject and force the agent to continue |
-| **PostToolUse** | A tool finishes executing successfully | Audit usage, block dangerous results, inject extra context into the conversation |
+| **PostToolUse** | A tool finishes executing successfully (runs **after** execution) | Audit usage, detect dangerous operations, inject extra context, suppress results |
 
 ### Two execution types
 
@@ -96,7 +101,7 @@ That's it. You just created a quality gate that every agent response must pass t
 | Level | Where to configure | Scope | Use when |
 |-------|-------------------|-------|----------|
 | **Agent level** | **Builder → Hooks** in the portal | Applies to the entire agent, all threads, all subagents | Organization-wide policies (audit all tools, block dangerous commands everywhere) |
-| **Subagent level** | **Subagent builder → Manage Hooks**, or REST API v2 | Applies only when that specific subagent runs | Subagent-specific controls (validate this subagent's output format) |
+| **Custom agent level** | **Agent Canvas → Custom agents → Manage Hooks**, or REST API v2 | Applies only when that specific custom agent runs | Custom agent-specific controls (validate this agent's output format) |
 
 Both levels can coexist. If an agent-level hook and a subagent-level hook both match the same event, **both run**. Agent-level hooks fire first.
 
@@ -238,11 +243,11 @@ All examples below are in YAML format and can be configured either through the *
 
 ---
 
-### Example 1: Block dangerous shell commands
+### Example 1: Detect dangerous shell commands
 
 **Event:** PostToolUse · **Type:** Command · **File:** [`examples/block-dangerous-commands.yaml`](examples/block-dangerous-commands.yaml)
 
-Block destructive operations like `rm -rf`, `sudo`, `chmod 777`, and SQL `DROP TABLE` before they can cause damage.
+Detect destructive operations like `rm -rf`, `sudo`, `chmod 777`, and SQL `DROP TABLE` after execution. The hook flags the violation and suppresses the result, but note the command has already run. For true prevention, combine with [Review mode or RBAC controls](#achieving-true-prevention).
 
 ```yaml
 hooks:
@@ -279,9 +284,9 @@ hooks:
         print(json.dumps({"decision": "allow"}))
 ```
 
-**When to use:** Always-on agent-level hook for any environment where the agent has shell access.
+**When to use:** Always-on agent-level hook for any environment where the agent has shell access. Provides detection and audit trail.
 
-**How to test:** Ask the agent to "run `rm -rf /tmp/test`" — the hook should block with a clear reason.
+**How to test:** Ask the agent to "run `rm -rf /tmp/test`" — the hook should detect and flag it with a clear reason.
 
 ---
 
@@ -319,7 +324,9 @@ hooks:
         }))
 ```
 
-**When to use:** Set to **On Demand** activation — toggle on during incident investigations or compliance-sensitive sessions.
+**When to use:** Set to **On Demand** activation — toggle on during incident investigations or diagnostic/demo sessions.
+
+> ⚠️ **Not compliance-grade audit.** This hook writes to stderr and injects context into the conversation — useful for diagnostics and demos. For production compliance auditing (SOC 2, ISO 27001), send audit events to Azure Monitor Log Analytics or Event Hub.
 
 **How to test:** Enable the hook in a thread (**Chat → + → Manage Hooks**), then ask a question that uses tools. You'll see `[AUDIT]` messages in the conversation.
 
@@ -403,11 +410,11 @@ hooks:
 
 ---
 
-### Example 5: Block VM and resource deletion
+### Example 5: Detect VM and resource deletion
 
 **Event:** PostToolUse · **Type:** Command · **File:** [`examples/block-vm-deletion.yaml`](examples/block-vm-deletion.yaml)
 
-Prevent the agent from deleting Azure VMs, resource groups, or other critical resources during testing and investigations.
+Detect and alert on Azure VM, resource group, or other critical resource deletion attempts. The hook runs after the command has executed, so it serves as an audit trail and flags violations — but does not prevent the deletion itself. For true prevention, combine with [RBAC controls or Review mode](#achieving-true-prevention).
 
 ```yaml
 hooks:
@@ -450,17 +457,17 @@ hooks:
         print(json.dumps({"decision": "allow"}))
 ```
 
-**When to use:** Always-on agent-level hook for testing and shared environments where resources should never be deleted by the agent.
+**When to use:** Always-on agent-level hook for testing and shared environments. Provides an audit trail for deletion attempts. Combine with RBAC controls for true prevention.
 
-**How to test:** Ask "Delete the VM test-vm-01 to clean up" — the hook should block the delete command.
+**How to test:** Ask "Delete the VM test-vm-01 to clean up" — the hook should detect and flag the delete command after execution.
 
 ---
 
-### Example 6: Restrict to read-only operations
+### Example 6: Detect write operations
 
 **Event:** PostToolUse · **Type:** Command · **File:** [`examples/restrict-to-readonly.yaml`](examples/restrict-to-readonly.yaml)
 
-Only allow read/diagnostic operations, blocking anything that modifies infrastructure. Ideal for read-only investigation contexts.
+Detect write/modification operations after execution and flag them. Allows read/diagnostic operations to pass through. Note: since PostToolUse runs after the tool executes, the write operation will have already completed. For true read-only enforcement, use a [Reader-only RBAC deployment](#achieving-true-prevention).
 
 ```yaml
 hooks:
@@ -521,9 +528,9 @@ hooks:
         print(json.dumps({"decision": "allow"}))
 ```
 
-**When to use:** Toggle on when you want the agent to only investigate, not remediate. Great as an **On Demand** hook — enable it for safe testing, disable for remediation testing.
+**When to use:** Toggle on when you want to detect write operations. Great as an **On Demand** hook — enable it for auditing during investigations. For true read-only enforcement, use a Reader RBAC role on the managed identity.
 
-**How to test:** Enable the hook, then ask "Restart the service nginx" or "Resize the VM" — the hook should block. Ask "Check disk usage" — should be allowed.
+**How to test:** Enable the hook, then ask "Restart the service nginx" or "Resize the VM" — the hook should detect and flag them. Ask "Check disk usage" — should pass through.
 
 ---
 
@@ -558,11 +565,11 @@ hooks:
 
 ---
 
-### Example 8: Allowlist-only remediation
+### Example 8: Detect unapproved remediation commands
 
 **Event:** PostToolUse · **Type:** Command · **File:** [`examples/allowlist-remediation.yaml`](examples/allowlist-remediation.yaml)
 
-Instead of blocklisting dangerous commands, this hook takes the **allowlist** approach: only explicitly approved remediation commands are permitted. Everything else is blocked. This is the most secure pattern for production environments.
+Instead of blocklisting dangerous commands, this hook takes the **allowlist** approach: it detects any command not on the approved list after execution. Approved commands pass through; unapproved ones are flagged. Since PostToolUse runs after execution, combine with [Review mode or RBAC controls](#achieving-true-prevention) for true prevention in production.
 
 ```yaml
 hooks:
@@ -630,12 +637,55 @@ hooks:
         }))
 ```
 
-**When to use:** Production environments where you want strict control over what the agent can change. This is the **most secure** pattern — an allowlist is always safer than a blocklist.
+**When to use:** Production environments where you want strict control over what the agent can change. Combine with [Review mode or RBAC controls](#achieving-true-prevention) for true enforcement — this hook provides the detection and audit layer.
 
 **How to test:**
 - ✅ "Restart the VM" → Allowed (matches `az vm restart`)
 - ✅ "Check disk usage" → Allowed (matches safe `df` command)
-- 🛑 "Change NSG rules" → Blocked (not on the allowlist)
+- 🛑 "Change NSG rules" → Detected and flagged (not on the allowlist)
+
+---
+
+## Achieving true prevention
+
+PostToolUse hooks are valuable for **detection, audit trails, and context injection** — but they run after a tool has already executed. If you need to truly **prevent** the agent from performing certain actions, use these complementary controls:
+
+### Review mode (agent asks before executing)
+
+Put the agent in **Review mode** so it asks for human approval before executing any tool. This is the most direct way to prevent unwanted actions.
+
+- Configure via **Builder → Run Mode → Review**
+- The agent will pause and present its planned action for approval
+- You can approve, reject, or modify before execution happens
+- See [Run Modes documentation](https://sre.azure.com/docs/concepts/run-modes) for details
+
+### Low-access deployment (Reader-only RBAC)
+
+Assign the agent's managed identity a **Reader** role (or no write permissions). Even if the agent tries to run a destructive command, Azure will deny it at the API level.
+
+- Assign `Reader` role on the target subscription/resource group
+- The agent can still investigate and diagnose, but cannot modify resources
+- This is the strongest prevention — the platform enforces it, not the agent
+
+### Azure RBAC custom roles
+
+Create a **custom RBAC role** that allows only specific actions. This gives fine-grained control over what the agent's managed identity can do.
+
+- Example: Allow `Microsoft.Compute/virtualMachines/read` and `Microsoft.Compute/virtualMachines/restart/action`, but deny `Microsoft.Compute/virtualMachines/delete`
+- Use `az role definition create` to define custom roles
+- Assign the custom role to the agent's managed identity
+
+### Recommended layered approach
+
+For production environments, combine all three:
+
+| Layer | Control | Purpose |
+|-------|---------|---------|
+| **1. RBAC** | Reader role or custom role on the managed identity | True prevention — Azure denies unauthorized API calls |
+| **2. Review mode** | Agent asks for approval before tool execution | Human-in-the-loop for approved actions |
+| **3. PostToolUse hooks** | Detection, audit trail, context injection | Visibility, compliance logging, guardrail feedback to the agent |
+
+This defense-in-depth approach ensures that even if one layer is misconfigured, the others provide protection.
 
 ---
 
@@ -653,7 +703,7 @@ hooks:
 
 **Subagent-level hooks** (apply to one specific subagent):
 
-1. Go to **Builder** → **Subagent builder**.
+1. Go to **Agent Canvas** → **Custom agents**.
 2. Select an existing subagent (or create a new one).
 3. Scroll to the **Hooks** section → click **Manage Hooks**.
 4. Click **Add hook** → fill in the form → **Save**.
@@ -725,13 +775,13 @@ You can also temporarily deactivate **Always** hooks in a specific thread.
 
 3. **Be specific with matchers.** Use `Bash|ExecuteShellCommand` instead of `*` for shell-specific policies. Overly broad matchers slow down the agent.
 
-4. **Prefer allowlists over blocklists.** Example 8 (allowlist) is fundamentally more secure than Example 1 (blocklist) — you can't forget to block something if only approved commands are allowed.
+4. **Prefer allowlists over blocklists.** Example 8 (allowlist) is fundamentally more reliable than Example 1 (blocklist) as a detection layer — you can't forget to detect something if only approved commands pass through.
 
-5. **Combine hooks for layered governance.** Use a Stop hook for quality + a PostToolUse hook for safety + an audit hook for compliance. They complement each other.
+5. **Combine hooks for layered governance.** Use a Stop hook for quality + a PostToolUse hook for safety + an audit hook for visibility. They complement each other.
 
 6. **Use On Demand for debugging hooks.** Audit-all-tools hooks are invaluable during incidents but noisy in routine operations. Set them to On Demand and toggle as needed.
 
-7. **Test hooks in the playground first.** Use **Subagent builder → Test playground** to test subagent hooks, or **Chat** with a specific prompt to test agent-level hooks.
+7. **Test hooks in the playground first.** Use **Agent Canvas → Custom agents → Test playground** to test custom agent hooks, or **Chat** with a specific prompt to test agent-level hooks.
 
 8. **Log to stderr for debugging.** Command hooks should use `print(..., file=sys.stderr)` for debug output. The system parses `stdout` as the hook result.
 

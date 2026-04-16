@@ -1,13 +1,16 @@
-# Block VM and resource deletion
+# Detect and alert on VM and resource deletion
 # ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
 #
-# Event:      PostToolUse
+# Event:      PostToolUse (runs AFTER the tool has executed)
 # Type:       Command (Python)
 # Matcher:    Bash|ExecuteShellCommand|ExecutePythonCode
 # Activation: Always
 #
-# Prevents the agent from deleting Azure VMs, resource groups, disks,
-# NSGs, or VNets. Essential for demo and shared environments.
+# Detects Azure VM, resource group, disk, NSG, and VNet deletion commands
+# after they have executed. Flags violations and provides an audit trail.
+# ⚠️ This hook does NOT prevent deletion — it detects it after the fact.
+# For true prevention, use RBAC (Reader role) or Review mode.
+# Essential for demo and shared environments as a detection/audit layer.
 
 hooks:
   PostToolUse:

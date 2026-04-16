@@ -1,14 +1,16 @@
-# Allowlist-only remediation
+# Detect unapproved remediation commands
 # ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
 #
-# Event:      PostToolUse
+# Event:      PostToolUse (runs AFTER the tool has executed)
 # Type:       Command (Python)
 # Matcher:    Bash|ExecuteShellCommand|ExecutePythonCode
 # Activation: Always
 #
-# Only explicitly approved remediation commands are permitted — everything
-# else is blocked. This is the most secure pattern for production environments.
-# An allowlist is always safer than a blocklist.
+# Detects commands not on the approved remediation list after execution.
+# Approved commands pass through; unapproved ones are flagged with an audit trail.
+# ⚠️ This hook does NOT prevent unapproved commands — they have already executed.
+# For true prevention, combine with Review mode or RBAC custom roles.
+# An allowlist approach is always more secure than a blocklist as a detection layer.
 #
 # To approve new commands, add patterns to the 'approved' list below.
 

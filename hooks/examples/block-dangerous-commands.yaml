@@ -1,12 +1,15 @@
-# Block dangerous shell commands
+# Detect dangerous shell commands
 # ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
 #
-# Event:      PostToolUse
+# Event:      PostToolUse (runs AFTER the tool has executed)
 # Type:       Command (Python)
 # Matcher:    Bash|ExecuteShellCommand
 # Activation: Always
 #
-# Blocks destructive operations: rm -rf, sudo, chmod 777, DROP TABLE, etc.
+# Detects destructive operations (rm -rf, sudo, chmod 777, DROP TABLE, etc.)
+# after they have executed. Flags the violation and provides an audit trail.
+# ⚠️ This hook does NOT prevent execution — it detects it after the fact.
+# For true prevention, use RBAC or Review mode.
 # Use as an always-on agent-level hook for any environment with shell access.
 
 hooks:

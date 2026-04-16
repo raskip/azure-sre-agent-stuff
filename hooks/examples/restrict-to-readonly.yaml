@@ -1,13 +1,15 @@
-# Restrict to read-only operations
+# Detect write operations (read-only mode)
 # ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
 #
-# Event:      PostToolUse
+# Event:      PostToolUse (runs AFTER the tool has executed)
 # Type:       Command (Python)
 # Matcher:    Bash|ExecuteShellCommand|ExecutePythonCode
 # Activation: On Demand
 #
-# Only allows read/diagnostic operations, blocking anything that modifies
-# infrastructure. Ideal for safe demo mode or read-only investigations.
+# Detects write/modification operations after execution and flags them.
+# Allows read/diagnostic operations to pass through.
+# ⚠️ This hook does NOT prevent write operations — they have already executed.
+# For true read-only enforcement, use a Reader-only RBAC role on the managed identity.
 # Set to On Demand — toggle on for safe demos, off for remediation demos.
 
 hooks:
