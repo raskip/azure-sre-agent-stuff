@@ -1,0 +1,6 @@
+{
+  "name": "vm-sre-skills",
+  "description": "10 example skills for diagnosing and remediating Azure Virtual Machine issues (Linux + Windows). Covers CPU, memory/OOM, disk IOPS throttling, disk expansion, connectivity, service crash loops, security incidents, right-sizing, backup health, and extension failures.",
+  "license": "MIT",
+  "skills": ["skills/"]
+}

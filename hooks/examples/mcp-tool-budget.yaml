@@ -1,0 +1,57 @@
+# MCP tool budget
+#
+# Event:       PostToolUse
+# Type:        Command (Python)
+# Matcher:     mcp_.*   (any MCP-prefixed tool name)
+# Activation:  Always (cost-control for agents with paid MCP servers)
+#
+# Counts MCP tool invocations per thread (via a per-thread state file)
+# and blocks after N calls. Use when you have MCP connectors that bill
+# per-call (e.g., a Datadog query MCP) or are rate-limited.
+#
+# State is persisted at /tmp/mcp-budget-<thread>.txt (sandbox-local).
+# The default limit is 25 calls per thread. Adjust BUDGET below.
+
+hooks:
+  PostToolUse:
+    - type: command
+      matcher: "mcp_.*"
+      timeout: 30
+      failMode: allow
+      script: |
+        #!/usr/bin/env python3
+        import sys, json, os, re
+
+        BUDGET = 25  # max MCP calls per thread
+
+        ctx = json.load(sys.stdin)
+        thread_id = ctx.get('thread_id') or ctx.get('agent_name', 'default')
+        # Sanitise thread_id for file path
+        safe_id = re.sub(r'[^A-Za-z0-9_-]', '_', str(thread_id))[:64]
+        state_path = f"/tmp/mcp-budget-{safe_id}.txt"
+
+        count = 0
+        try:
+            with open(state_path) as f:
+                count = int(f.read().strip() or 0)
+        except (FileNotFoundError, ValueError):
+            pass
+        count += 1
+        try:
+            with open(state_path, 'w') as f:
+                f.write(str(count))
+        except OSError:
+            pass
+
+        tool = ctx.get('tool_name', 'unknown')
+        if count > BUDGET:
+            print(json.dumps({
+                "decision": "block",
+                "reason": f"MCP call budget exceeded ({count}/{BUDGET}) in this thread. Tool: {tool}. Open a new thread or raise the budget."
+            }))
+            sys.exit(0)
+
+        print(json.dumps({
+            "decision": "allow",
+            "hookSpecificOutput": {"additionalContext": f"[MCP-BUDGET] {tool} call {count}/{BUDGET}"}
+        }))

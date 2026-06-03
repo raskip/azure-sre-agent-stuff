@@ -1,0 +1,33 @@
+# Prompt — Completeness check
+#
+# Event:       Stop
+# Type:        Prompt (LLM-evaluated)
+# Activation:  Always
+#
+# Forces every response to address root cause, remediation, and verification —
+# all three. LLM grades the response and rejects until complete (default
+# maxRejections=3). Use as an agent-level hook for production incident threads.
+
+hooks:
+  Stop:
+    - type: prompt
+      timeout: 45
+      failMode: allow
+      maxRejections: 3
+      model: ReasoningFast
+      prompt: |
+        Evaluate the agent response below against these three criteria:
+
+        1. ROOT CAUSE — clearly stated, with at least one piece of concrete
+           evidence (metric value, log line, timestamp, or commit SHA).
+        2. REMEDIATION — a specific action proposed or taken, not a vague
+           recommendation ("consider scaling" is NOT specific; "scale the
+           apps deployment from 3 to 5 replicas" IS).
+        3. VERIFICATION — how we know the fix worked (a metric back to
+           baseline, an alert resolved, a probe succeeding).
+
+        $ARGUMENTS
+
+        Respond with EXACTLY one of:
+          {"ok": true}
+          {"ok": false, "reason": "<which criterion failed and why, in one sentence>"}

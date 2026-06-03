@@ -1,0 +1,22 @@
+# Exit-code-only marker
+#
+# Event:       Stop
+# Type:        Command (bash, no JSON output)
+# Activation:  Always
+#
+# Demonstrates the simplest possible hook pattern: a bash one-liner that
+# uses exit codes (0 = allow, 2 = block with stderr as reason) instead of
+# JSON output. Equivalent to require-summary-section but ~10× shorter.
+
+hooks:
+  Stop:
+    - type: command
+      timeout: 15
+      failMode: allow
+      maxRejections: 3
+      script: |
+        #!/bin/bash
+        cat | python3 -c 'import sys,json; print(json.load(sys.stdin).get("final_output",""))' \
+            | grep -qiE '=== response complete ===' && exit 0
+        echo "End your response with the exact marker: === RESPONSE COMPLETE ===" >&2
+        exit 2

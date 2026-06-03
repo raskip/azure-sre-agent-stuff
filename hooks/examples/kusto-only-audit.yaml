@@ -1,0 +1,41 @@
+# Kusto-only audit
+#
+# Event:       PostToolUse
+# Type:        Command (Python)
+# Matcher:     ExecuteKustoQuery
+# Activation:  Always (recommended for any agent with Kusto/ADX tools)
+#
+# Audits every KQL query the agent runs: extracts the query, counts rows
+# returned, and injects an audit line. Helps you understand which tables
+# and queries the agent prefers, useful when training new custom skills.
+
+hooks:
+  PostToolUse:
+    - type: command
+      matcher: "ExecuteKustoQuery"
+      timeout: 30
+      failMode: allow
+      script: |
+        #!/usr/bin/env python3
+        import sys, json
+
+        ctx = json.load(sys.stdin)
+        query = (ctx.get('tool_input', {}) or {}).get('query', '') or ''
+        result = ctx.get('tool_result', '')
+
+        # Best-effort row count: result is often a JSON array or table string
+        row_count = '?'
+        if isinstance(result, list):
+            row_count = len(result)
+        elif isinstance(result, str):
+            row_count = result.count('\n')
+
+        # Truncate query to fit in one audit line
+        q_oneline = ' '.join(query.split())[:200]
+
+        audit = f"[KQL] rows={row_count} query={q_oneline}"
+        print(audit, file=sys.stderr)
+        print(json.dumps({
+            "decision": "allow",
+            "hookSpecificOutput": {"additionalContext": audit}
+        }))

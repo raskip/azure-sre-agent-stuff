@@ -1,0 +1,57 @@
+# Skill-aware evidence
+#
+# Event:       Stop
+# Type:        Prompt (LLM-evaluated, with transcript access)
+# Activation:  Always
+#
+# Replaces the legacy "trigger: on_response / applies_to" pseudo-schema
+# (which the agent could not actually install) with a real installable
+# Stop hook. The LLM is given access to the conversation transcript via
+# the ReadFile + GrepSearch tools that prompt hooks receive automatically,
+# and evaluates evidence quality differently depending on which skill ran.
+#
+# Use this as the canonical example of "different acceptance bar for
+# different skills, all enforced by one hook".
+
+hooks:
+  Stop:
+    - type: prompt
+      timeout: 60
+      failMode: allow
+      maxRejections: 2
+      model: ReasoningFast
+      prompt: |
+        You can read the conversation transcript via ReadFile / GrepSearch.
+
+        Step 1. Identify which skill was active during this turn. Look for
+        skill loading events ("loading skill X", "using skill X", or the
+        skill name appearing in the agent's planning step).
+
+        Step 2. Apply the matching acceptance bar:
+
+        - Skill is `appinsights-*` (any App Insights skill):
+            REQUIRE at least one concrete KQL block (```kusto ... ```)
+            OR a named App Insights table reference with a metric value
+            (e.g., "exceptions | count == 142").
+
+        - Skill is `high-cpu-vm-troubleshooting`:
+            REQUIRE a classification verdict (compute-bound / IO-wait /
+            steal / interrupt / kernel) AND a specific PID or process name.
+
+        - Skill is `disk-iops-throttling`:
+            REQUIRE Azure Monitor disk metric reference (e.g.,
+            "Data Disk IOPS Consumed Percentage")
+            AND in-guest iostat output or equivalent.
+
+        - Skill is `disk-expansion`:
+            REQUIRE the chosen topology ("LVM" / "raw" / "partitioned")
+            AND confirmation that `df -h` was re-run after resize.
+
+        - Skill is any other or unknown:
+            REQUIRE at least one concrete metric name with a value.
+
+        $ARGUMENTS
+
+        Respond with EXACTLY one of:
+          {"ok": true}
+          {"ok": false, "reason": "<which acceptance bar failed and what's missing>"}

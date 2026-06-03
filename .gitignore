@@ -1,0 +1,20 @@
+# Local / scratch
+tmp/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# Secrets / local params (never commit real values)
+.env
+*.local.json

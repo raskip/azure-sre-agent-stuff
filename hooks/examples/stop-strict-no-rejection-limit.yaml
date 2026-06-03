@@ -1,0 +1,29 @@
+# Stop — strict, high rejection limit
+#
+# Event:       Stop
+# Type:        Command (bash one-liner)
+# Activation:  On Demand (drills, training, strict-quality threads)
+#
+# Same idea as require-summary-section, but configured with the platform's
+# maximum maxRejections (25) so the agent keeps retrying for a long time
+# before giving up. Useful when teaching the agent a strict format.
+# WARNING: 25 retries × ~30 s each = up to ~12 min of wall time per Stop.
+
+hooks:
+  Stop:
+    - type: command
+      timeout: 30
+      failMode: allow
+      maxRejections: 25
+      script: |
+        #!/bin/bash
+        ctx=$(cat)
+        final=$(echo "$ctx" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("final_output",""))')
+        # Require both a Summary heading AND at least one Action item line
+        if echo "$final" | grep -qiE '^##\s+(summary|conclusion)\b' \
+           && echo "$final" | grep -qiE '^(\*|-|\d+\.)\s+'; then
+            exit 0
+        else
+            echo "Final response must include a '## Summary' heading AND at least one bullet/numbered action item." >&2
+            exit 2
+        fi

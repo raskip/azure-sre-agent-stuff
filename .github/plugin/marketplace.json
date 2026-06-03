@@ -1,0 +1,39 @@
+{
+  "name": "azure-sre-agent-stuff",
+  "owner": {
+    "name": "raskip",
+    "url": "https://github.com/raskip"
+  },
+  "metadata": {
+    "description": "Curated example skills for getting started with Azure SRE Agent. Fork and customise for your environment.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "vm-sre-skills",
+      "description": "10 example skills for diagnosing and remediating Azure Virtual Machine issues (Linux + Windows).",
+      "source": "./plugins/vm-sre-skills",
+      "version": "1.0.0",
+      "author": {
+        "name": "raskip",
+        "url": "https://github.com/raskip"
+      },
+      "homepage": "https://github.com/raskip/azure-sre-agent-stuff",
+      "repository": "https://github.com/raskip/azure-sre-agent-stuff",
+      "license": "MIT",
+      "examples": [
+        "Investigate why vm-app-001 is slow or unhealthy",
+        "Find critical VM issues across rg-prod and rg-backend",
+        "Explain the top infrastructure bottleneck affecting vm-prod-web-01",
+        "Report recommended remediation steps for vm-db-01"
+      ],
+      "tags": [
+        "vm",
+        "linux",
+        "windows",
+        "troubleshooting",
+        "remediation"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+# Prompt — Blameless language
+#
+# Event:       Stop
+# Type:        Prompt (LLM-evaluated)
+# Activation:  On Demand (post-incident reviews, customer-facing summaries)
+#
+# Rejects responses that name individuals or use accusatory phrasing.
+# Adopts the blameless post-mortem culture for agent-generated content.
+
+hooks:
+  Stop:
+    - type: prompt
+      timeout: 30
+      failMode: allow
+      maxRejections: 2
+      model: ReasoningFast
+      prompt: |
+        Evaluate whether the response uses blameless language:
+          - Does NOT name individual contributors as the cause
+            (e.g., "Alice's commit broke it", "Bob's deployment").
+            Referring to commit SHA or PR number is fine and encouraged.
+          - Does NOT use accusatory phrasing ("they should have", "you
+            forgot to", "obviously wrong").
+          - Focuses on systems, processes, and decisions — not people.
+
+        $ARGUMENTS
+
+        Respond with EXACTLY one of:
+          {"ok": true}
+          {"ok": false, "reason": "Reword to avoid naming individuals or accusatory phrasing. Refer to systems, commits, or decisions instead."}

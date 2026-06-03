@@ -1,0 +1,54 @@
+# Stack — Audit + policy on same event
+#
+# Event:       PostToolUse (×2 hooks, both fire)
+# Type:        Command (×2)
+# Activation:  Always
+#
+# Demonstrates that multiple hooks attach to the same event. Both run
+# independently; both can inject additionalContext (the last one's wins).
+# Order shown here = order of definition in the YAML. Both must finish
+# within their own timeout for the agent to proceed.
+
+hooks:
+  PostToolUse:
+    # Hook 1 — audit every tool call, never blocks
+    - type: command
+      matcher: "*"
+      timeout: 30
+      failMode: allow
+      script: |
+        #!/usr/bin/env python3
+        import sys, json
+        ctx = json.load(sys.stdin)
+        tool = ctx.get('tool_name', 'unknown')
+        success = ctx.get('tool_succeeded', False)
+        print(json.dumps({
+            "decision": "allow",
+            "hookSpecificOutput": {
+                "additionalContext": f"[AUDIT-1] tool={tool} success={success}"
+            }
+        }))
+
+    # Hook 2 — block dangerous shell patterns, fires only on shell tools
+    - type: command
+      matcher: "Bash|ExecuteShellCommand"
+      timeout: 30
+      failMode: block
+      script: |
+        #!/usr/bin/env python3
+        import sys, json, re
+        ctx = json.load(sys.stdin)
+        cmd = (ctx.get('tool_input', {}) or {}).get('command', '') or ''
+        for pat, label in [
+            (r'\brm\s+-rf\b',     'rm -rf'),
+            (r'\bsudo\b',          'sudo'),
+            (r'\bchmod\s+777\b',   'chmod 777'),
+            (r'>\s*/dev/sd[a-z]',  'raw block-device overwrite'),
+        ]:
+            if re.search(pat, cmd):
+                print(json.dumps({
+                    "decision": "block",
+                    "reason": f"Blocked dangerous pattern: {label}"
+                }))
+                sys.exit(0)
+        print(json.dumps({"decision": "allow"}))

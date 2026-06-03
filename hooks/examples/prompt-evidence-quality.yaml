@@ -1,0 +1,33 @@
+# Prompt — Evidence quality
+#
+# Event:       Stop
+# Type:        Prompt (LLM-evaluated)
+# Activation:  Always (recommended for diagnostic threads)
+#
+# Rejects responses that make claims without naming specific metrics or
+# producing concrete values. Complements require-evidence-in-diagnostics
+# (which is regex-based) with LLM-level judgement.
+
+hooks:
+  Stop:
+    - type: prompt
+      timeout: 45
+      failMode: allow
+      maxRejections: 2
+      model: ReasoningFast
+      prompt: |
+        Evaluate whether the agent response cites SPECIFIC evidence, not
+        generic claims. Good examples:
+          - "Percentage CPU peaked at 97% between 14:02 and 14:11"
+          - "exceptions table shows 142 NullReferenceException in last hour"
+          - "Commit abc1234 introduced the unindexed query"
+        Bad examples:
+          - "CPU is high"
+          - "There are some errors"
+          - "A recent deployment may be the cause"
+
+        $ARGUMENTS
+
+        Respond with EXACTLY one of:
+          {"ok": true}
+          {"ok": false, "reason": "Include at least one concrete metric name with a value or one log/trace line with a timestamp."}

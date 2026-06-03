@@ -1,0 +1,45 @@
+# Python output truncate
+#
+# Event:       PostToolUse
+# Type:        Command (Python)
+# Matcher:     ExecutePythonCode
+# Activation:  Always (recommended when the agent uses Python heavily)
+#
+# Caps the additionalContext injected back to the agent after Python
+# execution. Without this, a Python script that prints 50KB of JSON
+# floods the agent's context window. We keep the first 4000 chars + last
+# 500 chars and tell the agent how much was clipped.
+
+hooks:
+  PostToolUse:
+    - type: command
+      matcher: "ExecutePythonCode"
+      timeout: 30
+      failMode: allow
+      script: |
+        #!/usr/bin/env python3
+        import sys, json
+
+        ctx = json.load(sys.stdin)
+        result = ctx.get('tool_result', '')
+        if not isinstance(result, str):
+            result = json.dumps(result)
+
+        limit_head = 4000
+        limit_tail = 500
+        if len(result) <= limit_head + limit_tail:
+            # Output is small enough — let it pass untouched
+            print(json.dumps({"decision": "allow"}))
+            sys.exit(0)
+
+        clipped = len(result) - limit_head - limit_tail
+        truncated = (
+            result[:limit_head]
+            + f"\n\n... [{clipped} chars truncated by python-output-truncate hook] ...\n\n"
+            + result[-limit_tail:]
+        )
+
+        print(json.dumps({
+            "decision": "allow",
+            "hookSpecificOutput": {"additionalContext": truncated}
+        }))

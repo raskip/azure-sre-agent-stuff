@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "agentName": {
+      "value": "sre-agent-001-eastus2"
+    },
+    "subscriptionId": {
+      "value": "<your-subscription-id>"
+    },
+    "deploymentResourceGroupName": {
+      "value": "rg-sre-agent-001-eastus2"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "existingManagedIdentityId": {
+      "value": ""
+    },
+    "accessLevel": {
+      "value": "High"
+    },
+    "targetResourceGroups": {
+      "value": [
+        "rg-sre-demo-eastus2"
+      ]
+    },
+    "targetSubscriptions": {
+      "value": [
+        "<your-subscription-id>"
+      ]
+    }
+  }
+}

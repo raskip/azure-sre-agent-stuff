@@ -1,0 +1,34 @@
+# Enforce structured SRE response
+# ⚠️ Example hook — designed as a starting point. Test and customize for your environment.
+#
+# Event:      Stop
+# Type:       Prompt
+# Activation: Always
+#
+# Forces every diagnostic response to include Root Cause, Evidence, and
+# Recommended Actions sections — the standard SRE incident report format.
+# Best as a subagent-level hook on SRE diagnostic subagents.
+
+hooks:
+  Stop:
+    - type: prompt
+      timeout: 30
+      failMode: allow
+      maxRejections: 3
+      prompt: |
+        You are a quality gate for an SRE agent that investigates infrastructure issues.
+        Review the agent's response below:
+
+        $ARGUMENTS
+
+        Evaluate whether the response meets ALL of the following criteria:
+        1. Has a "## Root Cause" section with a specific, clear explanation
+           (not vague — must name the exact failure mechanism)
+        2. Has a "## Evidence" section with at least one concrete metric or data point
+           with an actual number (e.g., "CPU at 98%", "disk at 95% capacity")
+        3. Has a "## Recommended Actions" section with numbered, specific steps
+           (must include actual resource names or commands, not just "restart the service")
+
+        If ALL three criteria are met: {"ok": true}
+        If ANY criterion is missing or vague:
+        {"ok": false, "reason": "Your response needs more depth. Specifically: Root Cause must name the exact failure mechanism, Evidence must include real metric values with numbers, Recommended Actions must reference actual resource names and specific commands. Go back and verify your findings."}
